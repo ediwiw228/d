@@ -1,0 +1,106 @@
+PC0
+192.168.10.1
+255.255.255.0
+192.168.10.254
+
+PC1
+192.168.10.2
+255.255.255.0
+192.168.10.254
+
+SERVER
+172.16.100.1
+255.255.255.128
+172.16.100.126
+
+PC2
+172.16.100.2
+255.255.255.128
+172.16.100.126
+
+PC3
+172.16.100.3
+255.255.255.128
+172.16.100.126
+
+R1===
+hostname R1
+int g0/0
+ip add 192.168.10.254 255.255.255.0
+no shut
+int s0/0/0
+ip add 100.100.100.5 255.255.255.252
+no shut
+
+R2===
+hostname R2
+int g0/0
+ip add 172.16.100.126 255.255.255.128
+no shut
+int s0/0/1
+ip add 100.100.100.6 255.255.255.252
+no shut
+
+R2===OSPF
+exit
+router ospf 1
+router-id 2.2.2.2
+exit
+int g0/0
+ip ospf 1 area 0
+int s0/0/1
+ip ospf 1 area 0
+
+R1===
+exit
+router ospf 1
+router-id 1.1.1.1
+int g0/0
+ip ospf 1 area 0
+int s0/0/0
+ip ospf 1 area 0
+   *ctlr z 
+show ip route
+
+R1===NAT
+sh ip nat translations
+ip nat inside source static 192.168.10.1 209.168.201.5
+int g0/0
+ip nat inside
+int s0/0/0
+ip nat outside
+  *ctrl z
+ip route 209.168.201.5 255.255.255.255 null 0
+router ospf 1
+redistribute static subnets
+do sh ip nat translations
+
+R2===NAT
+sh ip route
+
+R1 
+ip access-list extended NO-HTTP
+deny tcp host 192.168.10.1 host 172.16.100.1 eq 80
+permit ip any any 
+int g0/0
+ip access-group NO-HTTP in
+
+R2
+username admin secret class
+ip access-list standard TELNET
+permit host 192.168.10.1 
+line vty 0 4
+login local
+transport input telnet 
+access-class TELNET in
+exit
+enable secret cisco 
+
+TELNET PC0
+telnet 100.100.100.6
+
+admin
+class
+en
+admin 
+cisco
